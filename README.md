@@ -1,6 +1,6 @@
-# SDL2-particles
+# SDL3-particles
 
-A Particle System for SDL2.
+A Particle System for SDL3.
 
 Modified from that of Cocos2dx.
 
@@ -11,14 +11,14 @@ It is a part of kys-cpp (<https://www.github.com/scarsty/kys-cpp>).
 An example has been supplied in main.cpp, please notice the comments:
 
 ```c++
-#include "SDL2/SDL.h"
+#include "SDL3/SDL.h"
 #include "ParticleExample.h"
 
 int main(int, char* argv[])
 {
     SDL_Init(SDL_INIT_VIDEO);
-    auto win = SDL_CreateWindow("SDL2 Particles", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 768, SDL_WINDOW_OPENGL);
-    auto ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    auto win = SDL_CreateWindow("SDL3 Particles", 1024, 768, SDL_WINDOW_OPENGL);
+    auto ren = SDL_CreateRenderer(win, nullptr);
 
     auto p = new ParticleExample();        // create a new particle system pointer
     p->setRenderer(ren);                   // set the renderer
@@ -29,9 +29,9 @@ int main(int, char* argv[])
     {
         SDL_Event e;
         SDL_PollEvent(&e);
-        if (e.type == SDL_KEYUP)
+        if (e.type == SDL_EVENT_KEY_UP)
         {
-            int s = (e.key.keysym.sym - SDLK_a + 1);
+            int s = (e.key.key - SDLK_A + 1);
             p->setStyle(ParticleExample::PatticleStyle(s));    // switch the example effects
         }
 
@@ -57,8 +57,8 @@ You can press A ~ K to switch the 11 example effects.
 
 Fire
 
-![fire](https://raw.githubusercontent.com/scarsty/SDL2-particles/master/pic/fire.png)
+![fire](https://raw.githubusercontent.com/scarsty/SDL3-particles/master/pic/fire.png)
 
 Snow
 
-![snow](https://raw.githubusercontent.com/scarsty/SDL2-particles/master/pic/snow.png)
+![snow](https://raw.githubusercontent.com/scarsty/SDL3-particles/master/pic/snow.png)

@@ -1,11 +1,11 @@
 #include "ParticleExample.h"
-#include "SDL2/SDL.h"
+#include "SDL3/SDL.h"
 
 int main(int, char* argv[])
 {
     SDL_Init(SDL_INIT_VIDEO);
-    auto win = SDL_CreateWindow("SDL2 Particles", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 768, SDL_WINDOW_OPENGL);
-    auto ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    auto win = SDL_CreateWindow("SDL3 Particles", 1024, 768, SDL_WINDOW_OPENGL);
+    auto ren = SDL_CreateRenderer(win, nullptr);
 
     auto p = new ParticleExample();        // create a new particle system pointer
     p->setRenderer(ren);                   // set the renderer
@@ -16,18 +16,21 @@ int main(int, char* argv[])
     p->setEndSpin(90);
     p->setStartSpinVar(90);
 
-    while (1)
+    bool running = true;
+    while (running)
     {
         SDL_Event e;
-        SDL_PollEvent(&e);
-        if (e.type == SDL_KEYUP)
+        while (SDL_PollEvent(&e))
         {
-            int s = (e.key.keysym.sym - SDLK_a + 1);
-            p->setStyle(ParticleExample::PatticleStyle(s));    // switch the example effects
-        }
-        if (e.type == SDL_QUIT)
-        {
-            break;
+            if (e.type == SDL_EVENT_KEY_UP)
+            {
+                int s = (e.key.key - SDLK_A + 1);
+                p->setStyle(ParticleExample::PatticleStyle(s));    // switch the example effects
+            }
+            if (e.type == SDL_EVENT_QUIT)
+            {
+                running = false;
+            }
         }
 
         SDL_RenderClear(ren);

@@ -437,12 +437,12 @@ void ParticleSystem::draw()
         {
             continue;
         }
-        SDL_Rect r = { int(p.posx + p.startPosX - p.size / 2), int(p.posy + p.startPosY - p.size / 2), int(p.size), int(p.size) };
+        SDL_FRect r = { p.posx + p.startPosX - p.size / 2.0f, p.posy + p.startPosY - p.size / 2.0f, p.size, p.size };
         SDL_Color c = { Uint8(p.colorR * 255), Uint8(p.colorG * 255), Uint8(p.colorB * 255), Uint8(p.colorA * 255) };
         SDL_SetTextureColorMod(_texture, c.r, c.g, c.b);
         SDL_SetTextureAlphaMod(_texture, c.a);
         SDL_SetTextureBlendMode(_texture, SDL_BLENDMODE_BLEND);
-        SDL_RenderCopyEx(_renderer, _texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
+        SDL_RenderTextureRotated(_renderer, _texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
     }
     update();
 }
