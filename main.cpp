@@ -17,6 +17,9 @@ int main(int, char* argv[])
     p->setStartSpinVar(90);
 
     bool running = true;
+    
+    Uint64 lastTime = SDL_GetTicks();
+
     while (running)
     {
         SDL_Event e;
@@ -24,8 +27,8 @@ int main(int, char* argv[])
         {
             if (e.type == SDL_EVENT_KEY_UP)
             {
-                int s = (e.key.key - SDLK_A + 1);
-                p->setStyle(ParticleExample::PatticleStyle(s));    // switch the example effects
+                int s = (e.key.key - SDLK_A + 1); 
+                p->setStyle(ParticleExample::PatticleStyle(s)); 
             }
             if (e.type == SDL_EVENT_QUIT)
             {
@@ -33,8 +36,24 @@ int main(int, char* argv[])
             }
         }
 
+        Uint64 currentTime = SDL_GetTicks();
+        float dt = (currentTime - lastTime) / 1000.0f;
+        lastTime = currentTime;
+
+        if (dt > 0.1f) dt = 0.1f;
+        if (dt <= 0.0f) dt = 0.001f;
+
+        float speedMultiplier = 2.5f; // 播放倍速
+        dt *= speedMultiplier;
+
+        p->update(dt);
+
+        SDL_SetRenderDrawColor(ren, 20, 20, 20, 255);
         SDL_RenderClear(ren);
-        p->draw();    // you have to draw it in each loop
+
+        // 5. 渲染
+        p->draw();    
+        
         SDL_RenderPresent(ren);
         SDL_Delay(10);
     }

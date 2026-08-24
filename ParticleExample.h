@@ -22,14 +22,19 @@ public:
         SMOKE,
         SNOW,
         RAIN,
+        FALLING_LEAVES,
+        DUST_STORM,
+        WIND
     };
 
     PatticleStyle style_ = NONE;
     void setStyle(PatticleStyle style);
-    SDL_Texture* getDefaultTexture()
-    {
-        static SDL_Texture* t = IMG_LoadTexture(_renderer, "fire.png");
-        //printf(SDL_GetError());
-        return t;
-    }
+    
+    SDL_Texture* getDefaultTexture();
+
+    // Static cleanup function to clear generated textures
+    static void FreeDefaultTextures();
+
+    // Reset system state
+    void resetSystem();
 };

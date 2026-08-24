@@ -1,10 +1,11 @@
 #pragma once
 
-//“∆÷≤◊‘Cocos2dx£¨∞Ê»®…˘√˜«Î≤Èø¥licensesŒƒº˛º–
+//ÁßªÊ§çËá™Cocos2dxÔºåÁâàÊùÉÂ£∞ÊòéËØ∑Êü•ÁúãlicensesÊñá‰ª∂Â§π
 
 #include "SDL3/SDL.h"
 #include <vector>
 #include <string>
+#include <math.h>
 
 struct Pointf
 {
@@ -37,6 +38,12 @@ struct Color4F
     float r = 0, g = 0, b = 0, a = 0;
 };
 
+// Multi-color ramp stop: Color at time t of particle life (0=birth, 1=death)
+struct ColorStop {
+    float t;
+    float r, g, b, a;
+};
+
 class ParticleData
 {
 public:
@@ -60,6 +67,8 @@ public:
     float rotation = 0;
     float deltaRotation = 0;
     float timeToLive = 0;
+    float initLife = 0; // Total lifespan at birth, used for color ramp
+
     unsigned int atlasIndex = 0;
 
     //! Mode A: gravity, direction, radial accel, tangential accel
@@ -80,8 +89,6 @@ public:
         float deltaRadius = 0;
     } modeB;
 };
-
-//typedef void (*CC_UPDATE_PARTICLE_IMP)(id, SEL, tParticle*, Vec2);
 
 /** @class ParticleSystem
  * @brief Particle System base class.
@@ -123,6 +130,13 @@ public:
     {
         GRAVITY,
         RADIUS,
+    };
+
+    // Blend mode for particles (e.g., ADD for fire, ALPHA for smoke)
+    enum class BlendMode
+    {
+        ALPHA,
+        ADD,
     };
 
     enum
@@ -304,11 +318,6 @@ public:
      * @param degrees The rotate per second variance.
      */
     virtual void setRotatePerSecondVar(float degrees);
-
-    //virtual void setScale(float s);
-    //virtual void setRotation(float newRotation);
-    //virtual void setScaleX(float newScaleX);
-    //virtual void setScaleY(float newScaleY);
 
     /** Whether or not the particle system is active.
      *
@@ -584,7 +593,7 @@ public:
     SDL_Texture* getTexture();
     void setTexture(SDL_Texture* texture);
     void draw();
-    void update();
+    void update(float dt = 1.0f / 25.0f);
 
     ParticleSystem();
     virtual ~ParticleSystem();
@@ -596,8 +605,19 @@ public:
     virtual void pauseEmissions();
     virtual void resumeEmissions();
 
-protected:
-    //virtual void updateBlendFunc();
+    // Advanced Effect Features
+    void setBlendMode(BlendMode m) { _blendMode = m; }
+    BlendMode getBlendMode() const { return _blendMode; }
+
+    // Turbulence force field (noise-driven displacement)
+    void setTurbulence(float strength, float frequency) { _turbStrength = strength; _turbFreq = frequency; }
+    void setTurbulenceStrength(float s) { _turbStrength = s; }
+    void setTurbulenceFrequency(float f) { _turbFreq = f; }
+    void resetTurbulenceTime() { _turbTime = 0.0f; }
+
+    // Multi-color ramp setup
+    void setColorRamp(const std::vector<ColorStop>& ramp) { _colorRamp = ramp; }
+    void clearColorRamp() { _colorRamp.clear(); }
 
 protected:
     /** whether or not the particles are using blend additive.
@@ -664,18 +684,8 @@ protected:
     //Emitter name
     std::string _configName;
 
-    // color modulate
-    //    BOOL colorModulate;
-
     //! How many particles can be emitted per second
     float _emitCounter = 0;
-
-    // Optimization
-    //CC_UPDATE_PARTICLE_IMP    updateParticleImp;
-    //SEL                        updateParticleSel;
-
-    /** weak reference to the SpriteBatchNode that renders the Sprite */
-    //ParticleBatchNode* _batchNode;
 
     // index of system in batch node array
     int _atlasIndex = 0;
@@ -742,17 +752,17 @@ protected:
     int _totalParticles = 0;
     /** conforms to CocosNodeTexture protocol */
     SDL_Texture* _texture = nullptr;
-    /** conforms to CocosNodeTexture protocol */
-    //BlendFunc _blendFunc;
     /** does the alpha value modify color */
     bool _opacityModifyRGB = false;
     /** does FlippedY variance of each particle */
     int _yCoordFlipped = 1;
 
-    /** particles movement type: Free or Grouped
-    @since v0.8
-    */
-    //PositionType _positionType;
+    // Advanced Effect Features Variables
+    BlendMode _blendMode = BlendMode::ALPHA;
+    float _turbStrength = 0.0f;
+    float _turbFreq = 0.0f;
+    float _turbTime = 0.0f;
+    std::vector<ColorStop> _colorRamp;
 
     /** is the emitter paused */
     bool _paused = false;
