@@ -1,4 +1,5 @@
 #include "ParticleSystem.h"
+#include "Noise.h"
 #include <algorithm>
 #include <assert.h>
 #include <string>
@@ -105,6 +106,7 @@ void ParticleSystem::addParticles(int count)
     {
         float theLife = _life + _lifeVar * RANDOM_M11(&RANDSEED);
         particle_data_[i].timeToLive = (std::max)(0.0f, theLife);
+        particle_data_[i].initLife = particle_data_[i].timeToLive; // Initialize initLife for color ramp
     }
 
     //position
@@ -198,7 +200,6 @@ void ParticleSystem::addParticles(int count)
     // Mode Gravity: A
     if (_emitterMode == Mode::GRAVITY)
     {
-
         // radial accel
         for (int i = start; i < _particleCount; ++i)
         {
@@ -286,10 +287,6 @@ void ParticleSystem::resetSystem()
 {
     _isActive = true;
     _elapsed = 0;
-    for (int i = 0; i < _particleCount; ++i)
-    {
-        //particle_data_[i].timeToLive = 0.0f;
-    }
 }
 
 bool ParticleSystem::isFull()
@@ -298,9 +295,8 @@ bool ParticleSystem::isFull()
 }
 
 // ParticleSystem - MainLoop
-void ParticleSystem::update()
+void ParticleSystem::update(float dt)
 {
-    float dt = 1.0 / 25;
     if (_isActive && _emissionRate)
     {
         float rate = 1.0f / _emissionRate;
@@ -321,6 +317,7 @@ void ParticleSystem::update()
         _emitCounter -= rate * emitCount;
 
         _elapsed += dt;
+        _turbTime += dt; // Update turbulence time
         if (_elapsed < 0.f)
         {
             _elapsed = 0.f;
@@ -341,12 +338,6 @@ void ParticleSystem::update()
     {
         if (particle_data_[i].timeToLive <= 0.0f)
         {
-            int j = _particleCount - 1;
-            //while (j > 0 && particle_data_[i].timeToLive <= 0)
-            //{
-            //    _particleCount--;
-            //    j--;
-            //}
             particle_data_[i] = particle_data_[_particleCount - 1];
             --_particleCount;
         }
@@ -375,16 +366,21 @@ void ParticleSystem::update()
             // (gravity + radial + tangential) * dt
             tmp.x = radial.x + tangential.x + modeA.gravity.x;
             tmp.y = radial.y + tangential.y + modeA.gravity.y;
+
+            // Turbulence: two offset FBMs form a near divergence-free curl field
+            if (_turbStrength > 0.0f && _turbFreq > 0.0f) {
+                float tx = particle_data_[i].posx * _turbFreq + _turbTime;
+                float ty = particle_data_[i].posy * _turbFreq + _turbTime * 0.7f;
+                tmp.x += noise::fbm2D(tx,       ty + 17.3f, 3) * _turbStrength;
+                tmp.y += noise::fbm2D(tx + 31.7f, ty -  9.2f, 3) * _turbStrength;
+            }
+
             tmp.x *= dt;
             tmp.y *= dt;
 
             particle_data_[i].modeA.dirX += tmp.x;
             particle_data_[i].modeA.dirY += tmp.y;
 
-            // this is cocos2d-x v3.0
-            // if (_configName.length()>0 && _yCoordFlipped != -1)
-
-            // this is cocos2d-x v3.0
             tmp.x = particle_data_[i].modeA.dirX * dt * _yCoordFlipped;
             tmp.y = particle_data_[i].modeA.dirY * dt * _yCoordFlipped;
             particle_data_[i].posx += tmp.x;
@@ -405,10 +401,39 @@ void ParticleSystem::update()
     //color, size, rotation
     for (int i = 0; i < _particleCount; ++i)
     {
-        particle_data_[i].colorR += particle_data_[i].deltaColorR * dt;
-        particle_data_[i].colorG += particle_data_[i].deltaColorG * dt;
-        particle_data_[i].colorB += particle_data_[i].deltaColorB * dt;
-        particle_data_[i].colorA += particle_data_[i].deltaColorA * dt;
+        // Use color ramp if configured, else linear lerp
+        if (!_colorRamp.empty() && particle_data_[i].initLife > 0.0f) {
+            float t = 1.0f - particle_data_[i].timeToLive / particle_data_[i].initLife;
+            if (t < 0.0f) t = 0.0f; if (t > 1.0f) t = 1.0f;
+            const auto& R = _colorRamp;
+            float r, g, b, a;
+            if (t <= R.front().t) {
+                r = R.front().r; g = R.front().g; b = R.front().b; a = R.front().a;
+            } else if (t >= R.back().t) {
+                r = R.back().r;  g = R.back().g;  b = R.back().b;  a = R.back().a;
+            } else {
+                for (size_t k = 0; k + 1 < R.size(); ++k) {
+                    if (t >= R[k].t && t <= R[k + 1].t) {
+                        float u = (t - R[k].t) / (R[k + 1].t - R[k].t);
+                        r = R[k].r + (R[k + 1].r - R[k].r) * u;
+                        g = R[k].g + (R[k + 1].g - R[k].g) * u;
+                        b = R[k].b + (R[k + 1].b - R[k].b) * u;
+                        a = R[k].a + (R[k + 1].a - R[k].a) * u;
+                        break;
+                    }
+                }
+            }
+            particle_data_[i].colorR = r;
+            particle_data_[i].colorG = g;
+            particle_data_[i].colorB = b;
+            particle_data_[i].colorA = a;
+        } else {
+            particle_data_[i].colorR += particle_data_[i].deltaColorR * dt;
+            particle_data_[i].colorG += particle_data_[i].deltaColorG * dt;
+            particle_data_[i].colorB += particle_data_[i].deltaColorB * dt;
+            particle_data_[i].colorA += particle_data_[i].deltaColorA * dt;
+        }
+
         particle_data_[i].size += (particle_data_[i].deltaSize * dt);
         particle_data_[i].size = (std::max)(0.0f, particle_data_[i].size);
         particle_data_[i].rotation += particle_data_[i].deltaRotation * dt;
@@ -441,10 +466,13 @@ void ParticleSystem::draw()
         SDL_Color c = { Uint8(p.colorR * 255), Uint8(p.colorG * 255), Uint8(p.colorB * 255), Uint8(p.colorA * 255) };
         SDL_SetTextureColorMod(_texture, c.r, c.g, c.b);
         SDL_SetTextureAlphaMod(_texture, c.a);
-        SDL_SetTextureBlendMode(_texture, SDL_BLENDMODE_BLEND);
+
+        // Apply dynamically configured blend mode
+        SDL_SetTextureBlendMode(_texture, _blendMode == BlendMode::ADD ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+        
+        // Exclusively use SDL3 rendering (Removed SDL2MODE check)
         SDL_RenderTextureRotated(_renderer, _texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
     }
-    update();
 }
 
 SDL_Texture* ParticleSystem::getTexture()
@@ -621,31 +649,6 @@ void ParticleSystem::setAutoRemoveOnFinish(bool var)
 {
     _isAutoRemoveOnFinish = var;
 }
-
-////don't use a transform matrix, this is faster
-//void ParticleSystem::setScale(float s)
-//{
-//    _transformSystemDirty = true;
-//    Node::setScale(s);
-//}
-//
-//void ParticleSystem::setRotation(float newRotation)
-//{
-//    _transformSystemDirty = true;
-//    Node::setRotation(newRotation);
-//}
-//
-//void ParticleSystem::setScaleX(float newScaleX)
-//{
-//    _transformSystemDirty = true;
-//    Node::setScaleX(newScaleX);
-//}
-//
-//void ParticleSystem::setScaleY(float newScaleY)
-//{
-//    _transformSystemDirty = true;
-//    Node::setScaleY(newScaleY);
-//}
 
 bool ParticleSystem::isPaused() const
 {

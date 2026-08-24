@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.16)
+project(SDL3Particles CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(SOURCES
+    main.cpp
+    ParticleSystem.cpp
+    ParticleExample.cpp
+)
+
+set(HEADERS
+    ParticleSystem.h
+    ParticleExample.h
+    Noise.h
+)
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    SDL3::SDL3
+    SDL3_image::SDL3_image
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    user32 
+    gdi32 
+    winmm 
+    imm32 
+    ole32 
+    oleaut32 
+    setupapi 
+    version 
+    uuid
+    cfgmgr32
+)
